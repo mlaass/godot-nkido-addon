@@ -70,17 +70,12 @@ func _parse_property(object: Object, type: Variant.Type, name: String, hint_type
     edit.gutters_draw_line_numbers = true
     edit.scroll_fit_content_height = false
 
-    # Monospaced font with ligatures
-    var base_font := SystemFont.new()
-    base_font.font_names = PackedStringArray([
-      "Fira Code", "JetBrains Mono", "Cascadia Code",
-      "Source Code Pro", "Consolas", "monospace"
-    ])
+    # Monospaced font with ligatures — use editor's code font as base
+    var editor_theme := EditorInterface.get_editor_theme()
+    var base_font := editor_theme.get_font("source", "EditorFonts")
     var font := FontVariation.new()
     font.base_font = base_font
-    # Enable contextual alternates (calt) for ligatures like |>
-    # OpenType tag "calt" = 0x63616C74
-    font.set_opentype_features({0x63616C74: 1, 0x636C6967: 1})
+    font.set_opentype_features({0x63616C74: 1, 0x636C6967: 1, 0x6C696761: 1})
     edit.add_theme_font_override("font", font)
     edit.add_theme_font_size_override("font_size", 13)
 
