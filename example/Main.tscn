@@ -6,10 +6,17 @@
 script = ExtResource("1")
 
 [node name="NkidoPlayer" type="NkidoPlayer" parent="." unique_id=1165741630]
-source = "pat(\"[c4, c5, e6, e7, f8] [c4, c5, b6, e7, f8] [g3, e7, f8, c4,c5, e6] [c4, e5, d6,  e7, f8] \") 
+source = "pat(\"[c4, c5, e6] [c4, c5,  f5] [g3, c5, e4] [c4, e4, f5]\") 
 |> poly(%, 12, (f, g, v) -> {
-    saw(f,0,g)*ar(g)*v*.2
+    saw(f,0,g) * ar(g) * v *.2
 })    
+|> out(%, %)
+
+pat(\"d3 [e4, e5]*2  d3 [e4, e5]*3 \") 
+|> poly(%, 12, (f, g, v) -> {
+    sine(f/2,0,g)*ar(g)*v*.2
+}) 
+   
 |> out(%, %)"
-autoplay = true
+bpm = 80.0
 bus = &"Nkido"
