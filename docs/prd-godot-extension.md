@@ -1,4 +1,4 @@
-> **Status: NOT STARTED** — Separate project at `~/workspace/godot-nkido`, no implementation exists.
+> **Status: COMPLETE** — All 3 phases implemented. See `prd-nkido-v2.md` for next phases.
 
 # PRD: Godot Extension for Enkido (v1 MVP)
 
