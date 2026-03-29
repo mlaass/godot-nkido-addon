@@ -1,5 +1,7 @@
 # PRD: Nkido v2 — Samples, Files, Editor, Cross-Platform
 
+> **Status: DRAFT**
+
 **Date:** 2026-03-28
 **Prerequisite:** v1 MVP (Phases 1–3) is complete.
 
@@ -162,7 +164,8 @@ User calls NkidoPlayer.compile()
   ├─ Sync required samples into VM's SampleBank:
   │     For each required_sample in CompileResult:
   │       Copy decoded audio from NkidoEngine cache → vm.sample_bank()
-  ├─ Resolve sample IDs in state_inits events
+  ├─ Resolve sample IDs in state_inits (iterate SequenceSampleMapping,
+  │     look up IDs in VM's sample bank, write to event values)
   ├─ apply_state_inits()
   └─ vm->load_program(bytecode)
 ```
@@ -246,13 +249,11 @@ All existing signals remain. No new signals added.
 
 ---
 
-## 5. Implementation Phases
-
-### Phase 4: Sample Loading & SoundFont Support
+## 5. Phase 4: Sample Loading & SoundFont Support
 
 **Goal:** Load audio samples and SoundFonts, use them in Akkado patterns.
 
-#### 5.1 NkidoEngine Sample API
+### 5.1 NkidoEngine Sample API
 
 Add sample loading to the `NkidoEngine` singleton.
 
@@ -268,7 +269,7 @@ Add sample loading to the `NkidoEngine` singleton.
 - `get_loaded_samples()` / `get_loaded_soundfonts()`: Return metadata arrays
 - Expose `sample_bank()`, `sample_registry()`, `soundfont_registry()` accessors for NkidoPlayer
 
-#### 5.2 NkidoPlayer Sample Integration
+### 5.2 NkidoPlayer Sample Integration
 
 Modify compilation flow to use samples.
 
@@ -281,7 +282,7 @@ Modify compilation flow to use samples.
   5. Resolve sample IDs in state_inits (iterate `SequenceSampleMapping`, look up IDs in VM's sample bank, write to event values)
   6. Then apply_state_inits() and load_program() as before
 
-#### 5.3 CMake Changes
+### 5.3 CMake Changes
 
 No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont sources are already compiled into the shared library.
 
@@ -302,11 +303,11 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 
 ---
 
-### Phase 5: `.akk` File Support
+## 6. Phase 5: `.akk` File Support
 
 **Goal:** Load Akkado source from `.akk` files with editor integration.
 
-#### 5.4 `source_file` Property
+### 6.1 `source_file` Property
 
 **C++ changes to `nkido_player.h/cpp`:**
 - Add `String source_file_` member
@@ -314,19 +315,21 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 - In `compile()`: if `source_file_` is set, read file via `FileAccess::open()` and use as source
 - Pass filename to `akkado::compile()` for diagnostic source locations
 
+**Autoplay interaction:** When `autoplay=true` and `source_file` is set, `_ready()` reads the file, compiles, and plays. If the file is missing at `_ready()` time, emit `compilation_finished(false, [{message: "File not found: <path>"}])`.
+
 **Edge case:** If both `source_file` and `source` are set, `source_file` takes priority. If `source_file` points to a missing file, emit `compilation_finished(false, [{message: "File not found: ..."}])`.
 
-#### 5.5 Inspector File Picker
+### 6.2 Inspector File Picker
 
 **GDScript changes to `nkido_inspector.gd`:**
 - Show current `source_file` path with a file picker button below the source editor
 - When `source_file` is set, show file contents in the CodeEdit (read-only or editable with save-back)
 - Add a "Reload" button to re-read the file
 
-#### 5.6 Auto-Recompile on File Change (Editor Only)
+### 6.3 Auto-Recompile on File Change (Editor Only)
 
 **GDScript changes to `nkido_inspector.gd` or `nkido_plugin.gd`:**
-- In the editor, use `EditorFileSystem`'s `filesystem_changed` signal or a polling timer
+- In the editor, connect to `EditorFileSystem.filesystem_changed` signal
 - When the `.akk` file's modification time changes, trigger recompile on the associated NkidoPlayer
 - Only active in editor, not at runtime
 
@@ -335,44 +338,63 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 | File | Change |
 |------|--------|
 | `addons/nkido/src/nkido_player.h` | Add source_file_ member, accessors |
-| `addons/nkido/src/nkido_player.cpp` | File reading in compile(), property binding |
+| `addons/nkido/src/nkido_player.cpp` | File reading in compile(), property binding, autoplay+file support |
 | `addons/nkido/nkido_inspector.gd` | File picker UI, reload button |
-| `addons/nkido/nkido_plugin.gd` | File change detection (editor only) |
+| `addons/nkido/nkido_plugin.gd` | File change detection via EditorFileSystem (editor only) |
 
 **Verification:**
 1. Set `source_file = "res://audio/test.akk"` in inspector → compile → hear audio
 2. Edit `test.akk` externally → editor auto-recompiles → hear updated audio
 3. Drag `.akk` file from FileSystem dock onto NkidoPlayer's source_file property
 4. Missing file → clear error message in compilation_finished signal
+5. Set `autoplay = true` + `source_file` → play scene → audio starts automatically
 
 ---
 
-### Phase 6: Enhanced Editor Experience
+## 7. Phase 6: Enhanced Editor Experience
 
 **Goal:** Full-featured bottom panel editor with error markers, autocomplete, and waveform visualization.
 
-#### 5.7 Bottom Panel
+### 7.1 Bottom Panel
 
 **New file `nkido_bottom_panel.gd`:**
-- `EditorPlugin.add_control_to_bottom_panel()` from `nkido_plugin.gd`
-- Full-width CodeEdit with the same syntax highlighting as the inspector
-- Toolbar: Compile, Play, Stop buttons + BPM field + selected player name
-- Syncs with currently selected NkidoPlayer node:
-  - `EditorPlugin.edit()` callback sets the active player
-  - Source changes in bottom panel write back to the player's source property (or source_file)
-- Right side panel or collapsible section for parameter controls
-- Panel visibility toggles with NkidoPlayer selection
 
-#### 5.8 Error Markers
+Extends `VBoxContainer`. Managed by `nkido_plugin.gd` via `add_control_to_bottom_panel()`.
+
+**Class structure:**
+- `active_player: NkidoPlayer` — currently bound player (set by plugin's `_edit()` callback)
+- `code_edit: CodeEdit` — full-width source editor with same syntax highlighting as inspector
+- `toolbar: HBoxContainer` — Compile, Play, Stop buttons + BPM SpinBox + player name label
+- `params_panel: VBoxContainer` — auto-generated parameter controls (left side of split)
+- `waveform_view: Control` — real-time waveform display (right side of split)
+
+**Signal connections:**
+- `NkidoPlugin._edit(object)` → calls `bottom_panel.set_player(player)` when a NkidoPlayer is selected
+- `NkidoPlugin._handles(object)` → returns true for NkidoPlayer instances
+- `code_edit.text_changed` → writes back to `active_player.source` (or `source_file` if set)
+- `active_player.compilation_finished` → updates error markers and parameter controls
+- `active_player.params_changed` → rebuilds parameter UI
+
+**Lifecycle:**
+- Player selected in scene tree → `_edit()` fires → bottom panel binds to player, loads source, shows panel
+- Player deselected → bottom panel unbinds, clears source and parameters
+- Multiple rapid selections → debounce via `set_deferred()` to avoid partial state
+
+**Source sync model:** Both the inspector and bottom panel can edit the NkidoPlayer's source. Changes propagate through the NkidoPlayer's `source` property — last write wins. No locking between them.
+
+**Panel visibility:** Toggles with NkidoPlayer selection via `make_bottom_panel_item_visible()`.
+
+### 7.2 Error Markers
 
 **Changes to CodeEdit (both inspector and bottom panel):**
+- Add a custom gutter for error indicators via `CodeEdit.add_gutter()`
 - After `compilation_finished(false, errors)`:
-  - Clear previous markers
-  - For each error with line/column: call `CodeEdit.set_line_as_error(line, true)` (Godot 4.x built-in)
-  - Show error tooltip on hover via `CodeEdit` gutter
-- On successful compile: clear all error markers
+  - Clear previous gutter icons
+  - For each error with line/column: call `set_line_gutter_icon(line, gutter_idx, error_icon)` and `set_line_gutter_color(line, gutter_idx, Color.RED)`
+  - Show error tooltip on hover via gutter click callback
+- On successful compile: clear all gutter error markers
 
-#### 5.9 Autocomplete
+### 7.3 Autocomplete
 
 **Changes to CodeEdit:**
 - Register a code completion provider via `CodeEdit.add_code_completion_option()`
@@ -383,7 +405,7 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
   - Akkado language keywords (param, button, toggle, dropdown, pat, etc.)
 - Trigger on typing or Ctrl+Space
 
-#### 5.10 Waveform Visualization
+### 7.4 Waveform Visualization
 
 **C++ changes to `nkido_audio_stream_playback.h/cpp`:**
 - Add a small circular buffer (e.g., 1024 frames) of recent output, readable from main thread
@@ -395,21 +417,26 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 - Timer-driven refresh (e.g., 30 FPS) calling `get_waveform_data()` and redrawing
 - Simple oscilloscope view: time on X, amplitude on Y
 
-#### 5.11 Custom Node Icon
+### 7.5 Custom Node Icon
 
 **New file `addons/nkido/icons/NkidoPlayer.svg`:**
 - SVG icon following Godot's icon style (16x16, rounded, consistent line weight)
 - Audio/synthesis themed (waveform or speaker symbol)
-- Register via `_get_plugin_icon()` override in `nkido_plugin.gd`
+- Godot auto-discovers icons matching GDExtension class names from the `icons/` directory. Add the `[icons]` section to `nkido.gdextension`:
+  ```ini
+  [icons]
+  NkidoPlayer = "res://addons/nkido/icons/NkidoPlayer.svg"
+  ```
 
 **Files:**
 
 | File | Change |
 |------|--------|
 | `addons/nkido/nkido_bottom_panel.gd` | New — bottom panel editor |
-| `addons/nkido/nkido_plugin.gd` | Register bottom panel, icon, edit() callback |
-| `addons/nkido/nkido_inspector.gd` | Error markers, autocomplete, simplified (transport moves to bottom panel) |
+| `addons/nkido/nkido_plugin.gd` | Register bottom panel, _edit()/_handles() callbacks |
+| `addons/nkido/nkido_inspector.gd` | Error markers via gutter API, autocomplete, simplified (transport moves to bottom panel) |
 | `addons/nkido/icons/NkidoPlayer.svg` | New — custom node icon |
+| `addons/nkido/nkido.gdextension` | Add `[icons]` section |
 | `addons/nkido/src/nkido_audio_stream_playback.h` | Waveform buffer, get_waveform_data() |
 | `addons/nkido/src/nkido_audio_stream_playback.cpp` | Write to waveform buffer in _mix() |
 | `addons/nkido/src/nkido_player.h` | Expose get_waveform_data() to GDScript |
@@ -417,18 +444,18 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 
 **Verification:**
 1. Select NkidoPlayer → bottom panel appears with full-width editor
-2. Type invalid code → error markers appear on correct lines
+2. Type invalid code → error markers appear on correct lines (gutter icons)
 3. Type `osc(` → autocomplete suggests oscillator types
 4. Play audio → waveform visualization shows real-time output
 5. NkidoPlayer shows custom icon in scene tree
 
 ---
 
-### Phase 7: Cross-Platform Builds & CI/CD
+## 8. Phase 7: Cross-Platform Builds & CI/CD
 
 **Goal:** Build for Linux, Windows, and macOS with automated CI.
 
-#### 5.12 CMake Cross-Platform
+### 8.1 CMake Cross-Platform
 
 **Changes to `CMakeLists.txt`:**
 - Platform detection: Linux (GCC/Clang), Windows (MSVC or MinGW), macOS (AppleClang)
@@ -439,10 +466,14 @@ No CMake changes needed — Cedar's sample_bank, audio_decoder, and soundfont so
 - Platform-specific link flags (e.g., `-framework CoreAudio` on macOS if needed)
 - Release build configuration (`CMAKE_BUILD_TYPE=Release` with LTO)
 
-#### 5.13 `.gdextension` Updates
+### 8.2 `.gdextension` Updates
 
 **Changes to `addons/nkido/nkido.gdextension`:**
 ```ini
+[configuration]
+entry_symbol = "nkido_library_init"
+compatibility_minimum = "4.6"
+
 [libraries]
 linux.debug.x86_64 = "res://addons/nkido/bin/libnkido.linux.template_debug.x86_64.so"
 linux.release.x86_64 = "res://addons/nkido/bin/libnkido.linux.template_release.x86_64.so"
@@ -452,15 +483,16 @@ macos.debug = "res://addons/nkido/bin/libnkido.macos.template_debug.universal.dy
 macos.release = "res://addons/nkido/bin/libnkido.macos.template_release.universal.dylib"
 ```
 
-#### 5.14 GitHub Actions CI
+### 8.3 GitHub Actions CI
 
 **New file `.github/workflows/build.yml`:**
 - Build matrix: `{os: [ubuntu-latest, windows-latest, macos-latest], build_type: [Debug, Release]}`
 - Steps: checkout repo + submodules, install dependencies, configure CMake, build, upload artifact
 - godot-cpp built as part of CMake (already a dependency)
 - Enkido sources compiled in-tree (already in CMakeLists.txt)
+- CI is build-only for v2 — no runtime or headless load tests
 
-#### 5.15 Release Workflow
+### 8.4 Release Workflow
 
 **New file `.github/workflows/release.yml`:**
 - Triggered on tag push (`v*`)
@@ -473,19 +505,19 @@ macos.release = "res://addons/nkido/bin/libnkido.macos.template_release.universa
 | File | Change |
 |------|--------|
 | `CMakeLists.txt` | Cross-platform detection, output naming, release config |
-| `addons/nkido/nkido.gdextension` | Add Windows + macOS library paths |
-| `.github/workflows/build.yml` | New — CI build matrix |
+| `addons/nkido/nkido.gdextension` | Update compatibility_minimum to 4.6, add Windows + macOS library paths |
+| `.github/workflows/build.yml` | New — CI build matrix (compile-only) |
 | `.github/workflows/release.yml` | New — tagged release workflow |
 
 **Verification:**
-1. CI passes on all 3 platforms
+1. CI passes (compiles successfully) on all 3 platforms
 2. Download release artifact → drop `addons/nkido/` into a fresh Godot project → NkidoPlayer loads
 3. Test on Windows: compile, play, hear audio
 4. Test on macOS: compile, play, hear audio
 
 ---
 
-## 6. Edge Cases
+## 9. Edge Cases
 
 ### Sample Loading
 - **Unsupported format:** `load_sample()` returns false, prints error to Godot console. Supported: WAV (PCM 16/24/32, float), OGG Vorbis, FLAC, MP3.
@@ -499,13 +531,18 @@ macos.release = "res://addons/nkido/bin/libnkido.macos.template_release.universa
 - **Binary/corrupt file:** UTF-8 decode fails → compile error.
 - **File changes during playback:** Auto-recompile triggers hot-swap with crossfade (same as manual recompile).
 
+### Editor
+- **Rapid NkidoPlayer selection switching:** Bottom panel uses `set_deferred()` to debounce binding changes. Intermediate selections are discarded — only the final selected player is bound.
+- **Large source files in CodeEdit:** CodeEdit handles large text natively. Syntax highlighting and autocomplete operate on visible lines only — no performance concern for typical Akkado files (<500 lines).
+- **Panel resize:** Bottom panel contents use `size_flags_horizontal = SIZE_EXPAND_FILL` so CodeEdit and parameter controls resize proportionally. Waveform view has a minimum width to remain readable.
+
 ### Cross-Platform
 - **macOS universal binary:** Built with `-arch arm64 -arch x86_64`. If one arch fails, the build fails.
 - **Windows path separators:** Godot's `FileAccess` handles this transparently with `res://` paths.
 
 ---
 
-## 7. Testing Strategy
+## 10. Testing Strategy
 
 ### Phase 4 Testing (Samples)
 1. **WAV loading:** Load mono and stereo WAV files at various sample rates → verify playback pitch is correct
@@ -520,36 +557,42 @@ macos.release = "res://addons/nkido/bin/libnkido.macos.template_release.universa
 2. **Auto-recompile:** Edit .akk file → save → verify recompile fires in editor
 3. **Missing file:** Set source_file to nonexistent path → verify clean error
 4. **Priority:** Set both source and source_file → verify source_file wins
+5. **Autoplay + file:** Set autoplay=true and source_file → play scene → audio starts automatically
 
 ### Phase 6 Testing (Editor)
 1. **Bottom panel:** Select NkidoPlayer → panel appears. Deselect → panel content clears.
-2. **Error markers:** Introduce typo → verify red marker on correct line
+2. **Error markers:** Introduce typo → verify red gutter icon on correct line
 3. **Autocomplete:** Type `osc(` → verify suggestions appear
 4. **Waveform:** Play audio → verify waveform updates in real-time, stops when audio stops
+5. **Rapid selection:** Click between multiple NkidoPlayers quickly → panel settles on last selected
 
 ### Phase 7 Testing (Cross-Platform)
-1. **CI:** Push to repo → all matrix jobs pass
+1. **CI:** Push to repo → all matrix jobs compile successfully
 2. **Windows:** Open Godot project with addon → NkidoPlayer compiles and plays
 3. **macOS:** Same verification on macOS (both Intel and Apple Silicon)
 4. **Release:** Tag a version → verify release artifact downloads and works
 
 ---
 
-## 8. Open Questions
+## 11. Resolved Decisions
 
-1. **Sample memory model:** Each NkidoPlayer's VM has its own SampleBank. Samples are copied from NkidoEngine's cache on compile. For large sample sets, this duplicates memory. Is this acceptable for v2, with shared SampleBank as a future optimization?
-
-2. **`.akk` file editing:** Should the bottom panel write changes back to the `.akk` file on disk, or only to the in-memory source? Writing to disk risks conflicting with external editors.
-
-3. **Waveform buffer thread safety:** The proposed approach uses a lock-free ring buffer (audio thread writes, main thread reads). Occasional torn reads would cause visual glitches but no crashes. Is this acceptable?
-
-4. **macOS code signing:** Pre-built dylibs need to be signed or users must disable Gatekeeper. Should the CI pipeline include ad-hoc signing?
-
-5. **godot-cpp version pinning:** Should we pin to a specific godot-cpp commit/tag for reproducible builds, or track a branch?
+1. **Sample memory model:** Each NkidoPlayer's VM has its own SampleBank. Samples are copied from NkidoEngine's cache on compile. This duplicates memory for large sample sets, which is acceptable for v2. Shared SampleBank is planned as a post-v2 optimization (see Future Work).
 
 ---
 
-## 9. Future Work (post-v2)
+## 12. Open Questions
+
+1. **`.akk` file editing:** Should the bottom panel write changes back to the `.akk` file on disk, or only to the in-memory source? Writing to disk risks conflicting with external editors.
+
+2. **Waveform buffer thread safety:** The proposed approach uses a lock-free ring buffer (audio thread writes, main thread reads). Occasional torn reads would cause visual glitches but no crashes. Is this acceptable?
+
+3. **macOS code signing:** Pre-built dylibs need to be signed or users must disable Gatekeeper. Should the CI pipeline include ad-hoc signing?
+
+4. **godot-cpp version pinning:** Should we pin to a specific godot-cpp commit/tag for reproducible builds, or track a branch?
+
+---
+
+## 13. Future Work (post-v2)
 
 - **Shared SampleBank:** Eliminate per-VM sample copies for memory efficiency
 - **Async sample loading:** Background thread decoding for large files
