@@ -5,6 +5,8 @@
 
 #include <cedar/vm/vm.hpp>
 
+#include <cstring>
+
 using namespace godot;
 
 NkidoAudioStreamPlayback::NkidoAudioStreamPlayback() = default;
@@ -29,6 +31,8 @@ void NkidoAudioStreamPlayback::_start(double p_from_pos) {
 
 void NkidoAudioStreamPlayback::_stop() {
     active_ = false;
+    std::memset(waveform_buffer_, 0, sizeof(waveform_buffer_));
+    waveform_write_.store(0, std::memory_order_release);
 }
 
 bool NkidoAudioStreamPlayback::_is_playing() const {

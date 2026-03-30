@@ -213,9 +213,13 @@ func _on_params_changed(params: Array) -> void:
   _build_param_controls(params)
 
 func _on_waveform_tick() -> void:
-  if is_instance_valid(current_stream) and is_instance_valid(waveform_view):
+  if not is_instance_valid(waveform_view):
+    return
+  if is_instance_valid(current_player) and current_player.playing and is_instance_valid(current_stream):
     var data: PackedFloat32Array = current_stream.call("get_waveform_data")
     waveform_view.set_data(data)
+  else:
+    waveform_view.set_data(PackedFloat32Array())
 
 func _build_param_controls(params: Array) -> void:
   if not is_instance_valid(params_panel):
