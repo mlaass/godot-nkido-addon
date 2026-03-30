@@ -27,6 +27,11 @@ void NkidoAudioStreamPlayback::_start(double p_from_pos) {
     active_ = true;
     ring_read_ = 0;
     ring_write_ = 0;
+
+    // Auto-compile if source is available but not yet compiled (supports autoplay)
+    if (stream_.is_valid() && !stream_->is_compiled()) {
+        stream_->compile();
+    }
 }
 
 void NkidoAudioStreamPlayback::_stop() {
