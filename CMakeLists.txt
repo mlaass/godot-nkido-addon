@@ -56,8 +56,6 @@ set(AKKADO_SOURCES
 set(EXT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/addons/nkido/src")
 set(EXT_SOURCES
     ${EXT_SRC}/register_types.cpp
-    ${EXT_SRC}/nkido_engine.cpp
-    ${EXT_SRC}/nkido_player.cpp
     ${EXT_SRC}/nkido_audio_stream.cpp
     ${EXT_SRC}/nkido_audio_stream_playback.cpp
 )
@@ -82,8 +80,22 @@ target_link_libraries(nkido PRIVATE godot-cpp)
 
 # Suppress warnings from cedar/akkado sources (they compile clean but godot-cpp
 # enables extra warnings that may fire on third-party code)
-set_source_files_properties(${CEDAR_SOURCES} ${AKKADO_SOURCES}
-    PROPERTIES COMPILE_OPTIONS "-w")
+if(MSVC)
+    set_source_files_properties(${CEDAR_SOURCES} ${AKKADO_SOURCES}
+        PROPERTIES COMPILE_OPTIONS "/w")
+else()
+    set_source_files_properties(${CEDAR_SOURCES} ${AKKADO_SOURCES}
+        PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+
+# LTO for Release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported)
+    if(ipo_supported)
+        set_target_properties(nkido PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+endif()
 
 # --- Output naming (matches godot-cpp convention) ---
 get_target_property(GODOTCPP_SUFFIX godot-cpp GODOTCPP_SUFFIX)
@@ -98,3 +110,8 @@ set_target_properties(nkido PROPERTIES
     PREFIX "lib"
     OUTPUT_NAME "nkido${GODOTCPP_SUFFIX}"
 )
+
+# On Windows, DLLs go to RUNTIME_OUTPUT_DIRECTORY, not LIBRARY
+if(WIN32)
+    set_target_properties(nkido PROPERTIES PREFIX "")
+endif()

@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build_type: Debug
+          - os: ubuntu-latest
+            build_type: Release
+          - os: windows-latest
+            build_type: Debug
+          - os: windows-latest
+            build_type: Release
+          - os: macos-latest
+            build_type: Debug
+          - os: macos-latest
+            build_type: Release
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} (${{ matrix.build_type }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout godot-cpp
+        uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot-cpp
+          ref: godot-4.4-stable
+          path: godot-cpp
+          submodules: recursive
+
+      - name: Checkout enkido
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/enkido
+          path: enkido
+          token: ${{ secrets.ENKIDO_TOKEN }}
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DGODOT_CPP_PATH=${{ github.workspace }}/godot-cpp
+          -DENKIDO_PATH=${{ github.workspace }}/enkido
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }} -j2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nkido-${{ matrix.os }}-${{ matrix.build_type }}
+          path: addons/nkido/bin/
+          retention-days: 14

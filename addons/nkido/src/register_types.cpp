@@ -1,7 +1,5 @@
 #include "register_types.h"
 
-#include "nkido_engine.h"
-#include "nkido_player.h"
 #include "nkido_audio_stream.h"
 #include "nkido_audio_stream_playback.h"
 
@@ -9,7 +7,6 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
-#include <godot_cpp/classes/engine.hpp>
 
 #include <cedar/cedar.hpp>
 
@@ -22,24 +19,13 @@ void initialize_nkido_module(ModuleInitializationLevel p_level) {
 
     cedar::init();
 
-    GDREGISTER_CLASS(NkidoEngine);
     GDREGISTER_CLASS(NkidoAudioStream);
     GDREGISTER_CLASS(NkidoAudioStreamPlayback);
-    GDREGISTER_CLASS(NkidoPlayer);
-
-    Engine::get_singleton()->register_singleton("NkidoEngine", memnew(NkidoEngine));
 }
 
 void uninitialize_nkido_module(ModuleInitializationLevel p_level) {
     if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
-    }
-
-    auto *engine = Object::cast_to<NkidoEngine>(
-        Engine::get_singleton()->get_singleton("NkidoEngine"));
-    Engine::get_singleton()->unregister_singleton("NkidoEngine");
-    if (engine) {
-        memdelete(engine);
     }
 
     cedar::shutdown();

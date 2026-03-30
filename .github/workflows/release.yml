@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux
+          - os: windows-latest
+            artifact: windows
+          - os: macos-latest
+            artifact: macos
+
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.artifact }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout godot-cpp
+        uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot-cpp
+          ref: godot-4.4-stable
+          path: godot-cpp
+          submodules: recursive
+
+      - name: Checkout enkido
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/enkido
+          path: enkido
+          token: ${{ secrets.ENKIDO_TOKEN }}
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DGODOT_CPP_PATH=${{ github.workspace }}/godot-cpp
+          -DENKIDO_PATH=${{ github.workspace }}/enkido
+
+      - name: Build
+        run: cmake --build build --config Release -j2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nkido-${{ matrix.artifact }}
+          path: addons/nkido/bin/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Assemble addon
+        run: |
+          mkdir -p dist/addons/nkido/bin
+          cp -r addons/nkido/*.gd dist/addons/nkido/
+          cp addons/nkido/plugin.cfg dist/addons/nkido/
+          cp addons/nkido/nkido.gdextension dist/addons/nkido/
+          cp -r artifacts/nkido-linux/* dist/addons/nkido/bin/ || true
+          cp -r artifacts/nkido-windows/* dist/addons/nkido/bin/ || true
+          cp -r artifacts/nkido-macos/* dist/addons/nkido/bin/ || true
+          cd dist && zip -r ../nkido-${{ github.ref_name }}.zip addons/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: nkido-${{ github.ref_name }}.zip
+          generate_release_notes: true

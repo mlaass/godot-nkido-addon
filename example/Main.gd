@@ -1,9 +1,10 @@
 extends Node2D
 
-@onready var synth: Node = $NkidoPlayer
+@onready var player: AudioStreamPlayer = $Player
 
 func _ready():
-	synth.compilation_finished.connect(_on_compiled)
+	var stream: NkidoAudioStream = player.stream
+	stream.compilation_finished.connect(_on_compiled)
 
 func _on_compiled(success: bool, errors: Array):
 	if success:
