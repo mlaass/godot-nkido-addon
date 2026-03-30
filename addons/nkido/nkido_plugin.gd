@@ -1,18 +1,18 @@
 @tool
 extends EditorPlugin
 
-var inspector_plugin: EditorInspectorPlugin
+# var inspector_plugin: EditorInspectorPlugin
 var bottom_panel: Control = null
 
 func _enter_tree() -> void:
-  inspector_plugin = preload("nkido_inspector.gd").new()
-  add_inspector_plugin(inspector_plugin)
+  # inspector_plugin = preload("nkido_inspector.gd").new()
+  # add_inspector_plugin(inspector_plugin)
 
   bottom_panel = preload("nkido_bottom_panel.gd").new()
   add_control_to_bottom_panel(bottom_panel, "Nkido")
 
 func _exit_tree() -> void:
-  remove_inspector_plugin(inspector_plugin)
+  # remove_inspector_plugin(inspector_plugin)
   if bottom_panel:
     remove_control_from_bottom_panel(bottom_panel)
     bottom_panel.queue_free()

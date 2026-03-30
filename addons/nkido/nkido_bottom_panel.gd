@@ -35,22 +35,6 @@ func _ready() -> void:
 
   var sep := VSeparator.new()
   toolbar.add_child(sep)
-
-  var bpm_label := Label.new()
-  bpm_label.text = "BPM:"
-  toolbar.add_child(bpm_label)
-
-  var bpm_spin := SpinBox.new()
-  bpm_spin.min_value = 1
-  bpm_spin.max_value = 300
-  bpm_spin.step = 0.1
-  bpm_spin.value = 120
-  bpm_spin.value_changed.connect(func(val: float):
-    if is_instance_valid(current_stream):
-      current_stream.set("bpm", val)
-  )
-  toolbar.add_child(bpm_spin)
-
   status_label = Label.new()
   status_label.text = ""
   status_label.add_theme_font_size_override("font_size", 12)
@@ -80,9 +64,8 @@ func _ready() -> void:
   code_edit.add_theme_font_override("font", font)
   code_edit.add_theme_font_size_override("font_size", 13)
 
-  # Syntax highlighting (reuse from inspector)
-  var InspectorScript = preload("nkido_inspector.gd")
-  code_edit.syntax_highlighter = InspectorScript._create_highlighter()
+  # Syntax highlighting
+  code_edit.syntax_highlighter = _create_highlighter()
 
   # Error gutter
   code_edit.add_gutter(0)
@@ -301,6 +284,49 @@ func _build_param_controls(params: Array) -> void:
         )
         row.add_child(option)
         params_panel.add_child(row)
+
+
+static func _create_highlighter() -> CodeHighlighter:
+  var hl := CodeHighlighter.new()
+  hl.number_color = Color(0.72, 0.52, 0.9)
+  hl.symbol_color = Color(0.67, 0.76, 0.82)
+  hl.function_color = Color(0.4, 0.75, 0.95)
+  hl.member_variable_color = Color(0.9, 0.55, 0.4)
+
+  hl.add_color_region("//", "", Color(0.45, 0.5, 0.45), true)
+  hl.add_color_region("\"", "\"", Color(0.6, 0.82, 0.5))
+
+  # DSP builtins
+  for kw in ["osc", "sin", "tri", "saw", "sqr", "sine", "ramp", "phasor",
+      "sqr_minblep", "sqr_pwm", "saw_pwm", "sqr_pwm_minblep",
+      "lp", "hp", "bp", "moog", "diode", "formant", "sallenkey", "lpf", "hpf", "bpf",
+      "adsr", "ar", "env_follower", "comp", "limiter", "gate",
+      "delay", "delay_ms", "delay_smp", "tap_delay",
+      "freeverb", "dattorro", "fdn", "chorus", "flanger", "phaser", "comb",
+      "saturate", "softclip", "bitcrush", "fold", "tube", "tape", "xfmr",
+      "excite", "smooth", "pingpong",
+      "out", "noise", "mtof", "dc", "slew", "sah", "clock", "lfo",
+      "trigger", "stereo", "left", "right", "pan", "width",
+      "ms_encode", "ms_decode", "sample", "sample_loop", "soundfont",
+      "abs", "sqrt", "log", "exp", "floor", "ceil",
+      "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh",
+      "min", "max", "clamp", "wrap", "select", "neg", "pow"]:
+    hl.add_keyword_color(kw, Color(0.4, 0.85, 0.75))
+
+  # Parameters
+  for kw in ["param", "button", "toggle", "dropdown"]:
+    hl.add_keyword_color(kw, Color(0.95, 0.75, 0.3))
+
+  # Patterns & sequencing
+  for kw in ["pat", "seq", "note", "timeline", "beat", "co", "euclid", "samp", "sf"]:
+    hl.add_keyword_color(kw, Color(0.95, 0.6, 0.65))
+
+  # Language keywords
+  for kw in ["as", "true", "false"]:
+    hl.add_keyword_color(kw, Color(0.85, 0.5, 0.65))
+
+  return hl
+
 
 
 # --- Waveform visualization ---
