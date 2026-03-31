@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="NkidoSamplePack" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://addons/nkido/nkido_sample_pack.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+samples = {
+"bd": "res://example/samples/808/kick01rr1.wav",
+"sd": "res://example/samples/808/snare01.wav",
+"sd:1": "res://example/samples/808/snare02.wav",
+"hh": "res://example/samples/808/hhclosed.wav",
+"oh": "res://example/samples/808/hhopen.wav",
+"cp": "res://example/samples/808/clap.wav",
+"rim": "res://example/samples/808/rimshot.wav",
+"cowbell": "res://example/samples/808/cowbell.wav",
+"cymbal": "res://example/samples/808/cymbal.wav",
+"tom": "res://example/samples/808/tomhi.wav",
+"tomlo": "res://example/samples/808/tomlo.wav"
+}
+soundfonts = {
+"ElecPiano.sf2": "res://example/soundfonts/ElecPiano.sf2"
+}
