@@ -52,6 +52,11 @@ void NkidoAudioStream::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "source_file", PROPERTY_HINT_FILE, "*.akk"),
         "set_source_file", "get_source_file");
 
+    ClassDB::bind_method(D_METHOD("set_sample_pack", "pack"), &NkidoAudioStream::set_sample_pack);
+    ClassDB::bind_method(D_METHOD("get_sample_pack"), &NkidoAudioStream::get_sample_pack);
+    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "sample_pack", PROPERTY_HINT_RESOURCE_TYPE, "Resource"),
+        "set_sample_pack", "get_sample_pack");
+
     // Compilation
     ClassDB::bind_method(D_METHOD("compile"), &NkidoAudioStream::compile);
     ClassDB::bind_method(D_METHOD("get_diagnostics"), &NkidoAudioStream::get_diagnostics);
@@ -121,6 +126,14 @@ String NkidoAudioStream::get_source_file() const {
     return source_file_;
 }
 
+void NkidoAudioStream::set_sample_pack(const Ref<Resource> &p_pack) {
+    sample_pack_ = p_pack;
+}
+
+Ref<Resource> NkidoAudioStream::get_sample_pack() const {
+    return sample_pack_;
+}
+
 // --- Sample Loading ---
 
 bool NkidoAudioStream::load_sample(const String &p_name, const String &p_path) {
@@ -167,6 +180,30 @@ void NkidoAudioStream::clear_soundfonts() {
     // SoundFontRegistry doesn't have a clear method — recreate via new VM isn't practical.
     // For v2, clearing soundfonts is a no-op with a warning.
     UtilityFunctions::print_rich("[color=yellow]NkidoAudioStream: clear_soundfonts() not yet supported[/color]");
+}
+
+void NkidoAudioStream::load_samples_from_pack() {
+    if (sample_pack_.is_null()) {
+        return;
+    }
+
+    Dictionary samples = sample_pack_->get("samples");
+    Array keys = samples.keys();
+    for (int i = 0; i < keys.size(); i++) {
+        String name = keys[i];
+        String file = samples[name];
+        if (name.is_empty() || file.is_empty()) continue;
+        load_sample(name, file);
+    }
+
+    Dictionary soundfonts = sample_pack_->get("soundfonts");
+    Array sf_keys = soundfonts.keys();
+    for (int i = 0; i < sf_keys.size(); i++) {
+        String sf_name = sf_keys[i];
+        String sf_file = soundfonts[sf_name];
+        if (sf_name.is_empty() || sf_file.is_empty()) continue;
+        load_soundfont(sf_name, sf_file);
+    }
 }
 
 Array NkidoAudioStream::get_loaded_samples() const {
@@ -249,6 +286,9 @@ bool NkidoAudioStream::compile() {
         emit_signal("compilation_finished", false, errors);
         return false;
     }
+
+    // Load samples from pack (before building registry)
+    load_samples_from_pack();
 
     // Build sample registry from loaded samples
     akkado::SampleRegistry sample_registry;

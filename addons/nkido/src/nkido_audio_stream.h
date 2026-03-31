@@ -2,6 +2,7 @@
 
 #include <godot_cpp/classes/audio_stream.hpp>
 #include <godot_cpp/classes/audio_stream_playback.hpp>
+#include <godot_cpp/classes/resource.hpp>
 
 #include <akkado/akkado.hpp>
 #include <cedar/vm/vm.hpp>
@@ -40,6 +41,10 @@ public:
     Array get_diagnostics() const;
     bool is_compiled() const;
 
+    // Sample pack
+    void set_sample_pack(const Ref<Resource> &p_pack);
+    Ref<Resource> get_sample_pack() const;
+
     // Sample loading
     bool load_sample(const String &p_name, const String &p_path);
     bool load_soundfont(const String &p_name, const String &p_path);
@@ -77,12 +82,16 @@ private:
 
     void resolve_sample_ids();
 
+    void load_samples_from_pack();
+
     std::unique_ptr<cedar::VM> vm_;
     String source_;
     String source_file_;
     bool compiled_ = false;
     float bpm_ = 120.0f;
     int crossfade_blocks_ = 3;
+
+    Ref<Resource> sample_pack_;
 
     mutable NkidoAudioStreamPlayback *active_playback_ = nullptr;
 
