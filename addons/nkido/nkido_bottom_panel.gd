@@ -288,15 +288,20 @@ func _build_param_controls(params: Array) -> void:
 
 static func _create_highlighter() -> CodeHighlighter:
   var hl := CodeHighlighter.new()
-  hl.number_color = Color(0.72, 0.52, 0.9)
-  hl.symbol_color = Color(0.67, 0.76, 0.82)
-  hl.function_color = Color(0.4, 0.75, 0.95)
-  hl.member_variable_color = Color(0.9, 0.55, 0.4)
+  var s := EditorInterface.get_editor_settings()
+  var c := func(n: String) -> Color:
+      return s.get_setting("text_editor/theme/highlighting/" + n)
 
-  hl.add_color_region("//", "", Color(0.45, 0.5, 0.45), true)
-  hl.add_color_region("\"", "\"", Color(0.6, 0.82, 0.5))
+  hl.number_color = c.call("number_color")
+  hl.symbol_color = c.call("symbol_color")
+  hl.function_color = c.call("function_color")
+  hl.member_variable_color = c.call("member_variable_color")
+
+  hl.add_color_region("//", "", c.call("comment_color"), true)
+  hl.add_color_region("\"", "\"", c.call("string_color"))
 
   # DSP builtins
+  var builtin_color: Color = c.call("engine_type_color")
   for kw in ["osc", "sin", "tri", "saw", "sqr", "sine", "ramp", "phasor",
       "sqr_minblep", "sqr_pwm", "saw_pwm", "sqr_pwm_minblep",
       "lp", "hp", "bp", "moog", "diode", "formant", "sallenkey", "lpf", "hpf", "bpf",
@@ -311,19 +316,22 @@ static func _create_highlighter() -> CodeHighlighter:
       "abs", "sqrt", "log", "exp", "floor", "ceil",
       "cos", "tan", "asin", "acos", "atan", "sinh", "cosh", "tanh",
       "min", "max", "clamp", "wrap", "select", "neg", "pow"]:
-    hl.add_keyword_color(kw, Color(0.4, 0.85, 0.75))
+    hl.add_keyword_color(kw, builtin_color)
 
   # Parameters
+  var param_color: Color = c.call("user_type_color")
   for kw in ["param", "button", "toggle", "dropdown"]:
-    hl.add_keyword_color(kw, Color(0.95, 0.75, 0.3))
+    hl.add_keyword_color(kw, param_color)
 
   # Patterns & sequencing
+  var pattern_color: Color = c.call("control_flow_keyword_color")
   for kw in ["pat", "seq", "note", "timeline", "beat", "co", "euclid", "samp", "sf"]:
-    hl.add_keyword_color(kw, Color(0.95, 0.6, 0.65))
+    hl.add_keyword_color(kw, pattern_color)
 
   # Language keywords
+  var keyword_color: Color = c.call("keyword_color")
   for kw in ["as", "true", "false"]:
-    hl.add_keyword_color(kw, Color(0.85, 0.5, 0.65))
+    hl.add_keyword_color(kw, keyword_color)
 
   return hl
 
