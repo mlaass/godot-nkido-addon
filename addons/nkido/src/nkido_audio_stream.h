@@ -4,6 +4,8 @@
 #include <godot_cpp/classes/audio_stream_playback.hpp>
 #include <godot_cpp/classes/resource.hpp>
 
+#include "nkido_akkado_source.h"
+
 #include <akkado/akkado.hpp>
 #include <cedar/vm/vm.hpp>
 
@@ -24,17 +26,14 @@ public:
     ~NkidoAudioStream();
 
     // Properties
-    void set_source(const String &p_source);
-    String get_source() const;
+    void set_akkado_source(const Ref<NkidoAkkadoSource> &p_source);
+    Ref<NkidoAkkadoSource> get_akkado_source() const;
 
     void set_bpm(float p_bpm);
     float get_bpm() const;
 
     void set_crossfade_blocks(int p_blocks);
     int get_crossfade_blocks() const;
-
-    void set_source_file(const String &p_path);
-    String get_source_file() const;
 
     // Compilation
     bool compile();
@@ -84,9 +83,10 @@ private:
 
     void load_samples_from_pack();
 
+    void _on_source_changed();
+
     std::unique_ptr<cedar::VM> vm_;
-    String source_;
-    String source_file_;
+    Ref<NkidoAkkadoSource> akkado_source_;
     bool compiled_ = false;
     float bpm_ = 120.0f;
     int crossfade_blocks_ = 3;

@@ -3,8 +3,10 @@ extends VBoxContainer
 
 var current_player: AudioStreamPlayer = null
 var current_stream: Object = null
+var current_source: Resource = null  # NkidoAkkadoSource
 
 var toolbar: HBoxContainer
+var source_label: Label
 var code_edit: CodeEdit
 var status_label: Label
 var params_panel: VBoxContainer
@@ -35,6 +37,13 @@ func _ready() -> void:
 
   var sep := VSeparator.new()
   toolbar.add_child(sep)
+  source_label = Label.new()
+  source_label.text = ""
+  source_label.add_theme_font_size_override("font_size", 12)
+  source_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.7))
+  toolbar.add_child(source_label)
+  var sep2 := VSeparator.new()
+  toolbar.add_child(sep2)
   status_label = Label.new()
   status_label.text = ""
   status_label.add_theme_font_size_override("font_size", 12)
@@ -100,20 +109,15 @@ func _ready() -> void:
   add_child(waveform_timer)
 
 func set_player(player: AudioStreamPlayer) -> void:
-  # Disconnect old signals
-  if is_instance_valid(current_stream):
-    if current_stream.has_signal("compilation_finished"):
-      if current_stream.is_connected("compilation_finished", _on_compilation_finished):
-        current_stream.disconnect("compilation_finished", _on_compilation_finished)
-    if current_stream.has_signal("params_changed"):
-      if current_stream.is_connected("params_changed", _on_params_changed):
-        current_stream.disconnect("params_changed", _on_params_changed)
+  _disconnect_signals()
 
   current_player = player
   current_stream = player.stream if player else null
+  current_source = null
 
   if not current_stream:
     code_edit.text = ""
+    source_label.text = ""
     waveform_timer.stop()
     return
 
@@ -123,16 +127,13 @@ func set_player(player: AudioStreamPlayer) -> void:
   if current_stream.has_signal("params_changed"):
     current_stream.connect("params_changed", _on_params_changed)
 
-  # Load source
-  var source_file: String = current_stream.get("source_file") if current_stream.get("source_file") else ""
-  if not source_file.is_empty():
-    var f := FileAccess.open(source_file, FileAccess.READ)
-    if f:
-      code_edit.text = f.get_as_text()
-    else:
-      code_edit.text = ""
+  # Load source from akkado_source resource
+  current_source = current_stream.get("akkado_source")
+  if current_source:
+    code_edit.text = current_source.get("source_code") if current_source.get("source_code") else ""
+    _update_source_label()
   else:
-    code_edit.text = current_stream.get("source") if current_stream.get("source") else ""
+    code_edit.text = ""
 
   # Load params
   var decls: Array = current_stream.call("get_param_decls")
@@ -140,6 +141,43 @@ func set_player(player: AudioStreamPlayer) -> void:
     _build_param_controls(decls)
 
   waveform_timer.start()
+
+func set_source(source: Resource) -> void:
+  _disconnect_signals()
+
+  current_player = null
+  current_stream = null
+  current_source = source
+
+  if not current_source:
+    code_edit.text = ""
+    source_label.text = ""
+    waveform_timer.stop()
+    return
+
+  code_edit.text = current_source.get("source_code") if current_source.get("source_code") else ""
+  _update_source_label()
+
+func _disconnect_signals() -> void:
+  if is_instance_valid(current_stream):
+    if current_stream.has_signal("compilation_finished"):
+      if current_stream.is_connected("compilation_finished", _on_compilation_finished):
+        current_stream.disconnect("compilation_finished", _on_compilation_finished)
+    if current_stream.has_signal("params_changed"):
+      if current_stream.is_connected("params_changed", _on_params_changed):
+        current_stream.disconnect("params_changed", _on_params_changed)
+
+func _update_source_label() -> void:
+  if not is_instance_valid(source_label):
+    return
+  if current_source:
+    var path: String = current_source.get("resource_path") if current_source.get("resource_path") else ""
+    if not path.is_empty():
+      source_label.text = path.get_file()
+    else:
+      source_label.text = "[embedded]"
+  else:
+    source_label.text = ""
 
 func _on_compile() -> void:
   if not is_instance_valid(current_stream):
@@ -157,15 +195,9 @@ func _on_stop() -> void:
     current_player.stop()
 
 func _on_text_changed() -> void:
-  if not is_instance_valid(current_stream):
+  if not is_instance_valid(current_source):
     return
-  var source_file: String = current_stream.get("source_file") if current_stream.get("source_file") else ""
-  if not source_file.is_empty():
-    var f := FileAccess.open(source_file, FileAccess.WRITE)
-    if f:
-      f.store_string(code_edit.text)
-  else:
-    current_stream.set("source", code_edit.text)
+  current_source.set("source_code", code_edit.text)
 
 func _on_compilation_finished(success: bool, errors: Array) -> void:
   if not is_instance_valid(status_label):

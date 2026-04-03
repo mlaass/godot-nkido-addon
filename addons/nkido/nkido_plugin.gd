@@ -23,9 +23,16 @@ func _handles(object: Object) -> bool:
     var stream = object.get("stream")
     if stream and stream.has_method(&"compile"):
       return true
+  if object and object.get_class() == "NkidoAkkadoSource":
+    return true
   return false
 
 func _edit(object: Object) -> void:
-  if object is AudioStreamPlayer and bottom_panel:
+  if not bottom_panel:
+    return
+  if object is AudioStreamPlayer:
     bottom_panel.set_player(object as AudioStreamPlayer)
+    make_bottom_panel_item_visible(bottom_panel)
+  elif object and object.get_class() == "NkidoAkkadoSource":
+    bottom_panel.set_source(object)
     make_bottom_panel_item_visible(bottom_panel)

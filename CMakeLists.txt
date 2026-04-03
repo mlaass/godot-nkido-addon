@@ -56,6 +56,9 @@ set(AKKADO_SOURCES
 set(EXT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/addons/nkido/src")
 set(EXT_SOURCES
     ${EXT_SRC}/register_types.cpp
+    ${EXT_SRC}/nkido_akkado_source.cpp
+    ${EXT_SRC}/nkido_akkado_source_format_loader.cpp
+    ${EXT_SRC}/nkido_akkado_source_format_saver.cpp
     ${EXT_SRC}/nkido_audio_stream.cpp
     ${EXT_SRC}/nkido_audio_stream_playback.cpp
 )

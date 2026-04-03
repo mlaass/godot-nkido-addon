@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://bl8cd0v5rp7oe" path="res://example/Main.gd" id="1"]
 
-[sub_resource type="NkidoAudioStream" id="NkidoAudioStream_1"]
-source = "pat(\"[c4, c5, e6] [c4, c5,  f5] [g3, e5, e4] [c4, e4, f5]\")
+[sub_resource type="NkidoAkkadoSource" id="NkidoAkkadoSource_src"]
+source_code = "pat(\"[c4, c5, e6] [c4, c5,  f5] [g3, e5, e4] [c4, e4, f5]\")
 |> poly(%, 12, (f, g, v) -> {
     saw(f,0,g) * ar(g) * v *.2
 })
@@ -15,6 +15,9 @@ pat(\"d3 [e4, e5]*2  d3 [e4, e5]*3 \")
 })
 |> phaser(%)
 |> out(%, %)"
+
+[sub_resource type="NkidoAudioStream" id="NkidoAudioStream_1"]
+akkado_source = SubResource("NkidoAkkadoSource_src")
 
 [node name="Main" type="Node2D" unique_id=1568401154]
 script = ExtResource("1")

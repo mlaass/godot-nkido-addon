@@ -30,10 +30,14 @@ NkidoAudioStream::~NkidoAudioStream() = default;
 
 void NkidoAudioStream::_bind_methods() {
     // Properties
-    ClassDB::bind_method(D_METHOD("set_source", "source"), &NkidoAudioStream::set_source);
-    ClassDB::bind_method(D_METHOD("get_source"), &NkidoAudioStream::get_source);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "source", PROPERTY_HINT_MULTILINE_TEXT),
-        "set_source", "get_source");
+    ClassDB::bind_method(D_METHOD("set_akkado_source", "source"),
+        &NkidoAudioStream::set_akkado_source);
+    ClassDB::bind_method(D_METHOD("get_akkado_source"),
+        &NkidoAudioStream::get_akkado_source);
+    ADD_PROPERTY(
+        PropertyInfo(Variant::OBJECT, "akkado_source",
+            PROPERTY_HINT_RESOURCE_TYPE, "NkidoAkkadoSource"),
+        "set_akkado_source", "get_akkado_source");
 
     ClassDB::bind_method(D_METHOD("set_bpm", "bpm"), &NkidoAudioStream::set_bpm);
     ClassDB::bind_method(D_METHOD("get_bpm"), &NkidoAudioStream::get_bpm);
@@ -46,11 +50,6 @@ void NkidoAudioStream::_bind_methods() {
         &NkidoAudioStream::get_crossfade_blocks);
     ADD_PROPERTY(PropertyInfo(Variant::INT, "crossfade_blocks", PROPERTY_HINT_RANGE, "1,10"),
         "set_crossfade_blocks", "get_crossfade_blocks");
-
-    ClassDB::bind_method(D_METHOD("set_source_file", "path"), &NkidoAudioStream::set_source_file);
-    ClassDB::bind_method(D_METHOD("get_source_file"), &NkidoAudioStream::get_source_file);
-    ADD_PROPERTY(PropertyInfo(Variant::STRING, "source_file", PROPERTY_HINT_FILE, "*.akk"),
-        "set_source_file", "get_source_file");
 
     ClassDB::bind_method(D_METHOD("set_sample_pack", "pack"), &NkidoAudioStream::set_sample_pack);
     ClassDB::bind_method(D_METHOD("get_sample_pack"), &NkidoAudioStream::get_sample_pack);
@@ -91,12 +90,22 @@ void NkidoAudioStream::_bind_methods() {
 
 // --- Properties ---
 
-void NkidoAudioStream::set_source(const String &p_source) {
-    source_ = p_source;
+void NkidoAudioStream::set_akkado_source(const Ref<NkidoAkkadoSource> &p_source) {
+    if (akkado_source_.is_valid()) {
+        akkado_source_->disconnect("changed", callable_mp(this, &NkidoAudioStream::_on_source_changed));
+    }
+    akkado_source_ = p_source;
+    if (akkado_source_.is_valid()) {
+        akkado_source_->connect("changed", callable_mp(this, &NkidoAudioStream::_on_source_changed));
+    }
 }
 
-String NkidoAudioStream::get_source() const {
-    return source_;
+Ref<NkidoAkkadoSource> NkidoAudioStream::get_akkado_source() const {
+    return akkado_source_;
+}
+
+void NkidoAudioStream::_on_source_changed() {
+    emit_changed();
 }
 
 void NkidoAudioStream::set_bpm(float p_bpm) {
@@ -116,14 +125,6 @@ void NkidoAudioStream::set_crossfade_blocks(int p_blocks) {
 
 int NkidoAudioStream::get_crossfade_blocks() const {
     return crossfade_blocks_;
-}
-
-void NkidoAudioStream::set_source_file(const String &p_path) {
-    source_file_ = p_path;
-}
-
-String NkidoAudioStream::get_source_file() const {
-    return source_file_;
 }
 
 void NkidoAudioStream::set_sample_pack(const Ref<Resource> &p_pack) {
@@ -254,37 +255,35 @@ Array NkidoAudioStream::get_required_samples() const {
 // --- Compilation ---
 
 bool NkidoAudioStream::compile() {
-    // Determine source code
-    std::string code_str;
-    std::string filename = "<input>";
-
-    if (!source_file_.is_empty()) {
-        // source_file takes priority
-        auto file = FileAccess::open(source_file_, FileAccess::READ);
-        if (file.is_null()) {
-            Array errors;
-            Dictionary err;
-            err["line"] = 0;
-            err["column"] = 0;
-            err["message"] = String("File not found: ") + source_file_;
-            errors.push_back(err);
-            emit_signal("compilation_finished", false, errors);
-            return false;
-        }
-        String content = file->get_as_text();
-        code_str = content.utf8().get_data();
-        filename = source_file_.utf8().get_data();
-    } else if (!source_.is_empty()) {
-        code_str = source_.utf8().get_data();
-    } else {
+    // Determine source code from akkado_source resource
+    if (akkado_source_.is_null()) {
         Array errors;
         Dictionary err;
         err["line"] = 0;
         err["column"] = 0;
-        err["message"] = "No source code provided";
+        err["message"] = "No Akkado source assigned";
         errors.push_back(err);
         emit_signal("compilation_finished", false, errors);
         return false;
+    }
+
+    String source_text = akkado_source_->get_source_code();
+    if (source_text.is_empty()) {
+        Array errors;
+        Dictionary err;
+        err["line"] = 0;
+        err["column"] = 0;
+        err["message"] = "Empty source";
+        errors.push_back(err);
+        emit_signal("compilation_finished", false, errors);
+        return false;
+    }
+
+    std::string code_str = source_text.utf8().get_data();
+    std::string filename = "<input>";
+    String res_path = akkado_source_->get_path();
+    if (!res_path.is_empty()) {
+        filename = res_path.utf8().get_data();
     }
 
     // Load samples from pack (before building registry)

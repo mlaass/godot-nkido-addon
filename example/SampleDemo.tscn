@@ -1,29 +1,14 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://dlcmqnv3vrcll"]
 
-[ext_resource type="Script" path="res://example/SampleDemo.gd" id="1"]
+[ext_resource type="Script" uid="uid://bqto3oi627frd" path="res://example/SampleDemo.gd" id="1"]
 [ext_resource type="Resource" path="res://example/drum_pack.tres" id="2"]
+[ext_resource type="NkidoAkkadoSource" uid="uid://dx1hu8lp3xyd" path="res://example/drums_and_piano.akk" id="2_aungn"]
 
 [sub_resource type="NkidoAudioStream" id="NkidoAudioStream_1"]
-source = "// 808 drum pattern with electric piano
-volume = param(\"volume\", 0.6, 0, 1)
-
-// Kick and snare
-pat(\"bd ~ ~ ~ sd ~ ~ ~ bd ~ bd ~ sd ~ ~ ~\") as drums
-
-// Hi-hats
-pat(\"hh hh hh hh hh hh hh oh\") as hats
-
-// Clap on beat 3
-pat(\"~ ~ ~ ~ cp ~ ~ ~\") as claps
-
-// Electric piano chords
-pat(\"c3 e3 g3 ~ ~ ~ ~ ~\") |> soundfont(%, \"ElecPiano.sf2\", 0) as piano
-
-(drums + hats * 0.5 + claps * 0.7 + piano * 0.4) * volume |> out(%, %)"
-bpm = 120.0
+akkado_source = ExtResource("2_aungn")
 sample_pack = ExtResource("2")
 
-[node name="SampleDemo" type="Control"]
+[node name="SampleDemo" type="Control" unique_id=256555434]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,11 +17,11 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="Player" type="AudioStreamPlayer" parent="."]
+[node name="Player" type="AudioStreamPlayer" parent="." unique_id=807547752]
 stream = SubResource("NkidoAudioStream_1")
 bus = &"Nkido"
 
-[node name="Layout" type="VBoxContainer" parent="."]
+[node name="Layout" type="VBoxContainer" parent="." unique_id=730789612]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,48 +33,48 @@ offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Title" type="Label" parent="Layout"]
+[node name="Title" type="Label" parent="Layout" unique_id=1945108821]
 layout_mode = 2
-text = "Nkido Sample Demo — 808 Kit + Electric Piano"
 theme_override_font_sizes/font_size = 18
+text = "Nkido Sample Demo — 808 Kit + Electric Piano"
 
-[node name="Sep1" type="HSeparator" parent="Layout"]
+[node name="Sep1" type="HSeparator" parent="Layout" unique_id=926680416]
 layout_mode = 2
 
-[node name="Toolbar" type="HBoxContainer" parent="Layout"]
+[node name="Toolbar" type="HBoxContainer" parent="Layout" unique_id=1167837758]
 layout_mode = 2
 
-[node name="PlayButton" type="Button" parent="Layout/Toolbar"]
+[node name="PlayButton" type="Button" parent="Layout/Toolbar" unique_id=963296979]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Compile & Play"
 
-[node name="StopButton" type="Button" parent="Layout/Toolbar"]
+[node name="StopButton" type="Button" parent="Layout/Toolbar" unique_id=2011088721]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Stop"
 
-[node name="BpmLabel" type="Label" parent="Layout/Toolbar"]
+[node name="BpmLabel" type="Label" parent="Layout/Toolbar" unique_id=1064267048]
 layout_mode = 2
 text = "BPM:"
 
-[node name="BpmSpinner" type="SpinBox" parent="Layout/Toolbar"]
+[node name="BpmSpinner" type="SpinBox" parent="Layout/Toolbar" unique_id=1435512916]
 unique_name_in_owner = true
 layout_mode = 2
 min_value = 40.0
 max_value = 300.0
 value = 120.0
 
-[node name="StatusLabel" type="Label" parent="Layout/Toolbar"]
+[node name="StatusLabel" type="Label" parent="Layout/Toolbar" unique_id=513417066]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Ready"
 
-[node name="Sep2" type="HSeparator" parent="Layout"]
+[node name="Sep2" type="HSeparator" parent="Layout" unique_id=1568581986]
 layout_mode = 2
 
-[node name="WaveformContainer" type="Control" parent="Layout"]
+[node name="WaveformContainer" type="Control" parent="Layout" unique_id=1746039485]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
