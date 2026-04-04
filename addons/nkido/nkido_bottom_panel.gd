@@ -69,7 +69,7 @@ func _ready() -> void:
   var base_font := editor_theme.get_font("source", "EditorFonts")
   var font := FontVariation.new()
   font.base_font = base_font
-  font.set_opentype_features({0x63616C74: 1, 0x636C6967: 1, 0x6C696761: 1})
+  font.set_opentype_features({0x63616C74: 1, 0x636C6967: 1, 0x6C696761: 1, 0x646C6967: 1})
   code_edit.add_theme_font_override("font", font)
   code_edit.add_theme_font_size_override("font_size", 13)
 
