@@ -16,29 +16,28 @@ pat("~ ~ ~ ~ cp ~ ~ ~") |> reverb(% ) *0.05 + % as claps
 
 // action bass
 pat("[d2 d2] [d2 d#2] [d2 d2] [d2 c#1]")
-	|> saw(%) * ar(%.trig, 0,0.5)
-	|> lp(%, 200 * action, 10 * action)
-	|> tanh(% * 1.2) *.75
-	|> %*action
+	>> saw(@) * ar(@.trig, 0,0.5)
+	>> lp(@, 200 * action, 10 * action)
+	>> tanh(@ * 1.2) *.75
+	>> @ * action
 	as bass
 
 // Electric piano chords
 pat("d2 ~ ~ ~  dvv2 ~ ~ ~").slow(4)
 	|> tune("31edo", %)
 	|> soundfont(%, "ElecPiano.sf2", 0)
-	|> tanh(%*2)
-	|> hp(%, 100)
-	|> %+0.5*delay(%, .5,.7) + reverb(%)*.2
+	|> tanh(@ *2)
+	|> hp(@, 100)
+	|> @ + 0.5*delay(@, .5,.7) + reverb(@)*.2
 as piano
 
 dnb = bass + drums |> comp(%)
 
-(
-	  hats_fast * action
+(   hats_fast * action
 	+ dnb
 	+ hats * (1.0-action)
 	+ claps * 0.7
 	+ piano * 0.4
 ) * volume
 
-|> out(%, %)
+|> out(@) 
