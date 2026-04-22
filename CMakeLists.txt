@@ -4,14 +4,14 @@ project(nkido-addon LANGUAGES CXX)
 # --- Paths to dependencies (override with -D) ---
 set(GODOT_CPP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../godot-cpp"
     CACHE PATH "Path to godot-cpp")
-set(ENKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../enkido"
-    CACHE PATH "Path to enkido (cedar + akkado)")
+set(NKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../nkido"
+    CACHE PATH "Path to nkido (cedar + akkado)")
 
 # --- godot-cpp ---
 add_subdirectory(${GODOT_CPP_PATH} godot-cpp EXCLUDE_FROM_ALL)
 
 # --- Cedar sources ---
-set(CEDAR_DIR "${ENKIDO_PATH}/cedar")
+set(CEDAR_DIR "${NKIDO_PATH}/cedar")
 set(CEDAR_SOURCES
     ${CEDAR_DIR}/src/cedar.cpp
     ${CEDAR_DIR}/src/vm/vm.cpp
@@ -24,7 +24,7 @@ set(CEDAR_SOURCES
 )
 
 # --- Akkado sources ---
-set(AKKADO_DIR "${ENKIDO_PATH}/akkado")
+set(AKKADO_DIR "${NKIDO_PATH}/akkado")
 set(AKKADO_SOURCES
     ${AKKADO_DIR}/src/akkado.cpp
     ${AKKADO_DIR}/src/diagnostics.cpp

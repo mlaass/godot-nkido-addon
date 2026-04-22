@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-**Nkido** is a GDExtension addon that embeds the Enkido audio synthesis system (Akkado compiler + Cedar VM) into Godot. It provides `NkidoAudioStream` — a custom `AudioStream` resource for real-time audio synthesis from Akkado source code, with parameter binding from GDScript, sample/soundfont loading, and an editor UI with bottom panel and inspector.
+**Nkido** is a GDExtension addon that embeds the Nkido audio synthesis system (Akkado compiler + Cedar VM) into Godot. It provides `NkidoAudioStream` — a custom `AudioStream` resource for real-time audio synthesis from Akkado source code, with parameter binding from GDScript, sample/soundfont loading, and an editor UI with bottom panel and inspector.
 
-Users attach a `NkidoAudioStream` to a standard `AudioStreamPlayer` node. The Akkado language and Cedar VM are developed in the sibling repo at `~/workspace/enkido`. This project only contains the Godot integration layer.
+Users attach a `NkidoAudioStream` to a standard `AudioStreamPlayer` node. The Akkado language and Cedar VM are developed in the sibling repo at `~/workspace/nkido`. This project only contains the Godot integration layer.
 
 ## Build Commands
 
@@ -22,7 +22,7 @@ cmake --build build -j$(nproc)
 
 CMake variables (override with `-D`):
 - `GODOT_CPP_PATH` — path to godot-cpp (default: `../godot-cpp`)
-- `ENKIDO_PATH` — path to enkido repo (default: `../enkido`)
+- `NKIDO_PATH` — path to nkido repo (default: `../nkido`)
 
 Cedar and Akkado source files are compiled directly into the shared library (not linked as separate static libs). Warning suppression (`-w`) is applied to cedar/akkado sources to avoid noise from godot-cpp's stricter warning flags.
 
@@ -156,7 +156,7 @@ params_changed(params: Array)
 
 ## Conventions
 
-- Class prefix: `Nkido` (not `Enkido`)
+- Class prefix: `Nkido`
 - Addon directory: `addons/nkido/`
 - C++ sources in `addons/nkido/src/`
 - GDScript inspector/plugin files at `addons/nkido/` root

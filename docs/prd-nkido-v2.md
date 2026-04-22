@@ -511,7 +511,7 @@ macos.release = "res://addons/nkido/bin/libnkido.macos.template_release.universa
 - Build matrix: `{os: [ubuntu-latest, windows-latest, macos-latest], build_type: [Debug, Release]}`
 - Steps: checkout repo + submodules, install dependencies, configure CMake, build, upload artifact
 - godot-cpp built as part of CMake (already a dependency)
-- Enkido sources compiled in-tree (already in CMakeLists.txt)
+- Nkido sources compiled in-tree (already in CMakeLists.txt)
 - CI is build-only for v2 — no runtime or headless load tests
 
 ### 8.4 Release Workflow

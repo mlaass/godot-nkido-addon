@@ -5,7 +5,7 @@
 **Date:** 2026-03-31
 **Prerequisites:**
 - v2 features complete (Phases 4–7 from `prd-nkido-v2.md`)
-- Enkido repo made public on GitHub
+- Nkido repo made public on GitHub
 
 ---
 
@@ -13,7 +13,7 @@
 
 ### 1.1 Context
 
-The Nkido GDExtension currently depends on two external C++ repositories — **godot-cpp** and **enkido** (Cedar + Akkado) — which must exist as sibling directories on disk (`../godot-cpp`, `../enkido`). The CI workflows check out each dependency separately using `actions/checkout`, and enkido requires a `ENKIDO_TOKEN` secret because it is a private repository.
+The Nkido GDExtension currently depends on two external C++ repositories — **godot-cpp** and **nkido** (Cedar + Akkado) — which must exist as sibling directories on disk (`../godot-cpp`, `../nkido`). The CI workflows check out each dependency separately using `actions/checkout`, and nkido requires a `NKIDO_TOKEN` secret because it is a private repository.
 
 This works but has several problems:
 - **Local setup is fragile** — developers must manually clone sibling repos at the correct paths and tags
@@ -23,8 +23,8 @@ This works but has several problems:
 
 ### 1.2 Goals
 
-- **Self-contained repository**: Add godot-cpp and enkido as git submodules so cloning with `--recurse-submodules` gives you everything needed to build
-- **Simplified CI**: Workflows use submodule checkout instead of separate repo checkouts; no more `ENKIDO_TOKEN` once enkido is public
+- **Self-contained repository**: Add godot-cpp and nkido as git submodules so cloning with `--recurse-submodules` gives you everything needed to build
+- **Simplified CI**: Workflows use submodule checkout instead of separate repo checkouts; no more `NKIDO_TOKEN` once nkido is public
 - **macOS universal binaries**: Produce arm64 + x86_64 fat binaries for macOS
 - **Build script**: Provide `build.sh` / `build.bat` so developers can build from source with a single command
 - **Godot AssetLib**: Package the addon for submission to the Godot Asset Library
@@ -45,8 +45,8 @@ This works but has several problems:
 
 | Aspect | Current | Proposed |
 |--------|---------|----------|
-| Dependencies | Sibling directories (`../godot-cpp`, `../enkido`) | Git submodules at `thirdparty/godot-cpp`, `thirdparty/enkido` |
-| Enkido access | Private repo, `ENKIDO_TOKEN` secret | Public repo, no auth needed |
+| Dependencies | Sibling directories (`../godot-cpp`, `../nkido`) | Git submodules at `thirdparty/godot-cpp`, `thirdparty/nkido` |
+| Nkido access | Private repo, `NKIDO_TOKEN` secret | Public repo, no auth needed |
 | godot-cpp version | `godot-4.4-stable` | `godot-4.6-stable` |
 | CI checkout | 3 separate `actions/checkout` steps | Single checkout with `submodules: recursive` |
 | macOS binary | Single-arch (runner native) | Universal binary (arm64 + x86_64 via `lipo`) |
@@ -63,7 +63,7 @@ This works but has several problems:
 godot-nkido-addon/
 ├── thirdparty/
 │   ├── godot-cpp/          # git submodule → godotengine/godot-cpp @ godot-4.6-stable
-│   └── enkido/             # git submodule → mlaass/enkido @ <pinned-tag>
+│   └── nkido/             # git submodule → mlaass/nkido @ <pinned-tag>
 ├── addons/nkido/
 │   ├── src/                # C++ extension sources (unchanged)
 │   ├── bin/                # Compiled binaries (gitignored)
@@ -97,14 +97,14 @@ godot-nkido-addon/
     path = thirdparty/godot-cpp
     url = https://github.com/godotengine/godot-cpp.git
 
-[submodule "thirdparty/enkido"]
-    path = thirdparty/enkido
-    url = https://github.com/mlaass/enkido.git
+[submodule "thirdparty/nkido"]
+    path = thirdparty/nkido
+    url = https://github.com/mlaass/nkido.git
 ```
 
 Submodules are pinned to specific commits (tags):
 - `godot-cpp` → `godot-4.6-stable` tag
-- `enkido` → latest stable tag at time of setup
+- `nkido` → latest stable tag at time of setup
 
 ### 4.2 CMakeLists.txt Changes
 
@@ -114,17 +114,17 @@ Update default dependency paths from sibling directories to submodule paths:
 # Before
 set(GODOT_CPP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../godot-cpp"
     CACHE PATH "Path to godot-cpp")
-set(ENKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../enkido"
-    CACHE PATH "Path to enkido (cedar + akkado)")
+set(NKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../nkido"
+    CACHE PATH "Path to nkido (cedar + akkado)")
 
 # After
 set(GODOT_CPP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/godot-cpp"
     CACHE PATH "Path to godot-cpp")
-set(ENKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/enkido"
-    CACHE PATH "Path to enkido (cedar + akkado)")
+set(NKIDO_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/nkido"
+    CACHE PATH "Path to nkido (cedar + akkado)")
 ```
 
-No other changes to CMakeLists.txt are needed — all source paths and include directories already use `${GODOT_CPP_PATH}` and `${ENKIDO_PATH}` variables.
+No other changes to CMakeLists.txt are needed — all source paths and include directories already use `${GODOT_CPP_PATH}` and `${NKIDO_PATH}` variables.
 
 ### 4.3 Build Scripts
 
@@ -166,7 +166,7 @@ echo Build complete: addons\nkido\bin\
 Key changes:
 - Replace 3 checkout steps with single checkout + `submodules: recursive`
 - Update godot-cpp ref to `godot-4.6-stable`
-- Remove `ENKIDO_TOKEN` usage (after enkido is public)
+- Remove `NKIDO_TOKEN` usage (after nkido is public)
 - Add macOS universal binary step
 
 ```yaml
@@ -391,7 +391,7 @@ This is the same zip the release workflow already produces. AssetLib submission 
 | `build.sh` | **New** | Linux/macOS build script |
 | `build.bat` | **New** | Windows build script |
 | `thirdparty/godot-cpp/` | **New** | Git submodule |
-| `thirdparty/enkido/` | **New** | Git submodule |
+| `thirdparty/nkido/` | **New** | Git submodule |
 
 ---
 
@@ -399,10 +399,10 @@ This is the same zip the release workflow already produces. AssetLib submission 
 
 | File | Change |
 |------|--------|
-| `CMakeLists.txt` | Update `GODOT_CPP_PATH` default to `thirdparty/godot-cpp`, `ENKIDO_PATH` to `thirdparty/enkido` |
-| `.github/workflows/build.yml` | Replace 3 checkout steps with `submodules: recursive`; remove `ENKIDO_TOKEN`; keep debug+release matrix for validation |
+| `CMakeLists.txt` | Update `GODOT_CPP_PATH` default to `thirdparty/godot-cpp`, `NKIDO_PATH` to `thirdparty/nkido` |
+| `.github/workflows/build.yml` | Replace 3 checkout steps with `submodules: recursive`; remove `NKIDO_TOKEN`; keep debug+release matrix for validation |
 | `.github/workflows/release.yml` | Submodule checkout; split macOS into arm64+x86_64 builds with `lipo` step; include `example/` in release zip |
-| `.gitmodules` | New file defining `thirdparty/godot-cpp` and `thirdparty/enkido` submodules |
+| `.gitmodules` | New file defining `thirdparty/godot-cpp` and `thirdparty/nkido` submodules |
 | `build.sh` | New file — bash script: init submodules, configure, build |
 | `build.bat` | New file — batch script: init submodules, configure, build |
 
@@ -412,28 +412,28 @@ This is the same zip the release workflow already produces. AssetLib submission 
 
 ### Phase 1: Transition — Submodules with Token Fallback
 
-**Goal:** Add submodules and update CMake/CI while enkido is still private.
+**Goal:** Add submodules and update CMake/CI while nkido is still private.
 
 1. Add git submodules:
    ```bash
    git submodule add https://github.com/godotengine/godot-cpp.git thirdparty/godot-cpp
    cd thirdparty/godot-cpp && git checkout godot-4.6-stable && cd ../..
-   git submodule add https://github.com/mlaass/enkido.git thirdparty/enkido
+   git submodule add https://github.com/mlaass/nkido.git thirdparty/nkido
    ```
 
 2. Update `CMakeLists.txt` default paths to `thirdparty/`
 
 3. Update `.github/workflows/build.yml`:
    - Use `submodules: recursive` for checkout
-   - Keep `ENKIDO_TOKEN` in the checkout step as a fallback for the private submodule:
+   - Keep `NKIDO_TOKEN` in the checkout step as a fallback for the private submodule:
      ```yaml
      - uses: actions/checkout@v4
        with:
          submodules: recursive
-         token: ${{ secrets.ENKIDO_TOKEN }}
+         token: ${{ secrets.NKIDO_TOKEN }}
      ```
-   - Remove the separate godot-cpp and enkido checkout steps
-   - Remove `-DGODOT_CPP_PATH` and `-DENKIDO_PATH` overrides from cmake configure (defaults now correct)
+   - Remove the separate godot-cpp and nkido checkout steps
+   - Remove `-DGODOT_CPP_PATH` and `-DNKIDO_PATH` overrides from cmake configure (defaults now correct)
 
 4. Update `.github/workflows/release.yml` similarly
 
@@ -445,14 +445,14 @@ This is the same zip the release workflow already produces. AssetLib submission 
 - CI build matrix passes (all 6 configs)
 - Local build with old sibling paths still works via `-D` overrides
 
-### Phase 2: Enkido Goes Public
+### Phase 2: Nkido Goes Public
 
-**Goal:** Remove auth requirements once enkido repo is made public.
+**Goal:** Remove auth requirements once nkido repo is made public.
 
-1. Make enkido repo public on GitHub
+1. Make nkido repo public on GitHub
 
 2. Update `.github/workflows/build.yml`:
-   - Remove `token: ${{ secrets.ENKIDO_TOKEN }}` from checkout step
+   - Remove `token: ${{ secrets.NKIDO_TOKEN }}` from checkout step
    ```yaml
    - uses: actions/checkout@v4
      with:
@@ -461,10 +461,10 @@ This is the same zip the release workflow already produces. AssetLib submission 
 
 3. Update `.github/workflows/release.yml` similarly
 
-4. Optionally remove `ENKIDO_TOKEN` secret from GitHub repo settings
+4. Optionally remove `NKIDO_TOKEN` secret from GitHub repo settings
 
 **Verification:**
-- CI builds pass without `ENKIDO_TOKEN`
+- CI builds pass without `NKIDO_TOKEN`
 - Fresh clone with `--recurse-submodules` works without auth (test from a different machine/account)
 
 ### Phase 3: macOS Universal Binary
@@ -531,8 +531,8 @@ This is the same zip the release workflow already produces. AssetLib submission 
 
 ### 8.5 Backward Compatibility — Old Sibling Paths
 
-**Situation:** Developer has existing sibling directory setup (`../godot-cpp`, `../enkido`).
-**Expected behavior:** Still works — pass `-DGODOT_CPP_PATH=../godot-cpp -DENKIDO_PATH=../enkido` to cmake. The CMake variables are `CACHE PATH` so command-line overrides take precedence over defaults.
+**Situation:** Developer has existing sibling directory setup (`../godot-cpp`, `../nkido`).
+**Expected behavior:** Still works — pass `-DGODOT_CPP_PATH=../godot-cpp -DNKIDO_PATH=../nkido` to cmake. The CMake variables are `CACHE PATH` so command-line overrides take precedence over defaults.
 
 ### 8.6 AssetLib Zip Structure Mismatch
 
@@ -547,11 +547,11 @@ This is the same zip the release workflow already produces. AssetLib submission 
 
 | Phase | Test | Expected Result |
 |-------|------|-----------------|
-| 1 | `git clone --recurse-submodules <repo>` | `thirdparty/godot-cpp/` and `thirdparty/enkido/` populated |
+| 1 | `git clone --recurse-submodules <repo>` | `thirdparty/godot-cpp/` and `thirdparty/nkido/` populated |
 | 1 | `./build.sh` on Linux | Binary at `addons/nkido/bin/libnkido.linux.template_release.x86_64.so` |
 | 1 | CI push to branch | All 6 matrix jobs pass |
 | 2 | Clone from a fresh account (no token) | Submodules clone without auth errors |
-| 2 | CI build without `ENKIDO_TOKEN` | All jobs pass |
+| 2 | CI build without `NKIDO_TOKEN` | All jobs pass |
 | 3 | `file addons/nkido/bin/*.dylib` | Shows `universal binary with 2 architectures` |
 | 3 | Load in Godot on Apple Silicon Mac | Extension loads, audio plays |
 | 4 | `unzip nkido-v*.zip -d test-project/` | `test-project/addons/nkido/` has all files + binaries |

@@ -32,19 +32,18 @@ jobs:
           path: godot-cpp
           submodules: recursive
 
-      - name: Checkout enkido
+      - name: Checkout nkido
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/enkido
-          path: enkido
-          token: ${{ secrets.ENKIDO_TOKEN }}
+          repository: ${{ github.repository_owner }}/nkido
+          path: nkido
 
       - name: Configure
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=Release
           -DGODOT_CPP_PATH=${{ github.workspace }}/godot-cpp
-          -DENKIDO_PATH=${{ github.workspace }}/enkido
+          -DNKIDO_PATH=${{ github.workspace }}/nkido
 
       - name: Build
         run: cmake --build build --config Release -j2
