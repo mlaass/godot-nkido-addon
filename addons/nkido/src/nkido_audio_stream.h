@@ -47,11 +47,18 @@ public:
     // Sample loading
     bool load_sample(const String &p_name, const String &p_path);
     bool load_soundfont(const String &p_name, const String &p_path);
+    bool load_wavetable(const String &p_name, const String &p_path);
     void clear_samples();
     void clear_soundfonts();
     Array get_loaded_samples() const;
     Array get_loaded_soundfonts() const;
     Array get_required_samples() const;
+    Array get_required_soundfonts() const;
+    Array get_required_wavetables() const;
+    Array get_required_uris() const;
+    Array get_required_midi_sources() const;
+    Array get_midi_cc_routes() const;
+    Array get_viz_decls() const;
 
     // Parameters
     void set_param(const String &p_name, float p_value, float p_slew_ms = 20.0f);
@@ -61,6 +68,10 @@ public:
 
     // Waveform visualization
     PackedFloat32Array get_waveform_data() const;
+
+    // Audio input (INPUT opcode)
+    void set_input_buffers(const PackedFloat32Array &p_left,
+                            const PackedFloat32Array &p_right);
 
     // Internal (for playback)
     cedar::VM *get_vm() const;
@@ -81,9 +92,22 @@ private:
 
     void resolve_sample_ids();
 
+    void auto_load_required_assets(const akkado::CompileResult &p_result);
+
+    void init_midi_sources(const akkado::CompileResult &p_result);
+
     void load_samples_from_pack();
 
     void _on_source_changed();
+
+    static std::string build_sample_lookup_name(const std::string &bank,
+                                                const std::string &name,
+                                                int variant);
+
+    // Audio input scratch (sized to BLOCK_SIZE=128). Populated by
+    // set_input_buffers() on the main thread and re-pointed each block.
+    std::vector<float> input_left_;
+    std::vector<float> input_right_;
 
     std::unique_ptr<cedar::VM> vm_;
     Ref<NkidoAkkadoSource> akkado_source_;

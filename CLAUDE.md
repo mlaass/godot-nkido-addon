@@ -77,16 +77,36 @@ AudioStreamPlayer (standard Godot node)
   - `set_param()`: lock-free atomic writes via EnvMap
   - `process_block()`: reads from current program buffer
 
+### Program Loading
+
+The compiler emits `[main | block bodies]` bytecode with a `block_table`. `compile()` uses `vm->load_program_with_blocks(bytecode, block_table, main_instruction_count)` so FOREACH_EVENT subprograms, `loop(N){…}`, `when()`, and shared `fn` `BLOCK_CALL` dispatch work.
+
 ### State Init Application
 
-After compilation, `apply_state_inits()` processes the compiler's `StateInitData` vector:
-- **SequenceProgram**: copies sequence event pointers, calls `vm->init_sequence_program_state()`
-- **PolyAlloc**: calls `vm->init_poly_state()`
-- **Timeline**: creates `TimelineState`, copies breakpoints
+`apply_state_inits()` processes the compiler's `StateInitData` vector. All six types are handled:
+- **SequenceProgram**: copies sequence event pointers, calls `vm->init_sequence_program_state()`. If `iter_n > 0`, follows with `init_sequence_iter_state()`.
+- **PolyAlloc**: calls `vm->init_poly_state()` with `release_seconds`, `prop_count`, `prop_defaults` (custom record-suffix props per voice).
+- **Timeline**: creates `TimelineState`, copies breakpoints.
+- **ExtendedParams**: `init_extended_params()` for builtins with >5 params (constants + buffer refs per slot).
+- **ForeachAlloc**: `init_foreach_state()` for FOREACH_EVENT instances (VOICE_POOL / PER_ITERATION / SHARED allocators). VOICE_POOL reuses the poly_* fields.
+- **SoundfontEvents**: `init_soundfont_voice_event_state()` for event-driven SF2 voice pools.
+- **EventTransform**: `init_sequence_program_state()` with empty sequences (output buffer sized from `total_events`).
+
+After state inits, `init_midi_sources()` walks `required_midi_sources` and calls `vm->init_midi_queue_state()` per entry.
 
 ### Sample Resolution
 
-`resolve_sample_ids()` maps sample names in pattern events to SampleBank IDs before state init. Uses `sequence_sample_mappings` from `CompileResult` — each mapping specifies (seq_idx, event_idx, sample_name, bank, variant) and the resolved ID is written into `events[event_idx].values[0]`.
+`resolve_sample_ids()` does two passes before program load:
+1. **Pattern events** — walks `state_inits[].sequence_sample_mappings`, writes resolved sample id to `events[event_idx].values[mapping.value_slot]` (slot supports merged sample polyrhythms like `[bd, hh]`).
+2. **Scalar `sample("name")` refs** — walks `scalar_sample_mappings`, patches the PUSH_CONST instruction's `state_id` immediate with the resolved id.
+
+### Asset Auto-Loading
+
+`auto_load_required_assets(result)` runs at compile time, before sample-id resolution:
+- `required_uris` — file://, res://, user:// paths are read via `FileAccess::get_file_as_bytes()` and routed by `UriKind` into `SampleBank` / `SoundFontRegistry` / `WavetableBankRegistry`. Network schemes (http, github, bundled, blob) are warned and skipped.
+- `required_soundfonts` — declared by literal `soundfont("name.sf2", …)` calls.
+- `required_wavetables` — declared by `wt_load("name", "path")`.
+- Legacy `sample_pack` Resource is still loaded as a fallback.
 
 ## NkidoAudioStream API
 
@@ -107,14 +127,21 @@ compile() -> bool                    # Compiles source, loads into VM
 get_diagnostics() -> Array           # [{line, column, message}, ...]
 is_compiled() -> bool
 
-# Sample loading
+# Sample / asset loading
 load_sample(name, path) -> bool      # Load audio file (WAV/OGG/FLAC/MP3) into SampleBank
 load_soundfont(name, path) -> bool   # Load SF2 file into SoundFontRegistry
+load_wavetable(name, path) -> bool   # Load WAV into WavetableBankRegistry
 clear_samples()
 clear_soundfonts()
 get_loaded_samples() -> Array        # [{name, id, frames, channels, sample_rate}, ...]
 get_loaded_soundfonts() -> Array     # [{id, preset_count}, ...]
 get_required_samples() -> Array      # [{name, bank, variant}, ...] from last compile
+get_required_soundfonts() -> Array   # [{filename, preset_index}, ...]
+get_required_wavetables() -> Array   # [{name, path, id}, ...]
+get_required_uris() -> Array         # [{uri, kind}, ...] (kind: sample_bank|soundfont|wavetable|sample)
+get_required_midi_sources() -> Array # [{state_id, kind, name_or_path, channel_filter, loop, tempo_mode}, ...]
+get_midi_cc_routes() -> Array        # [{param_name, cc_num, channel_filter, scale, bias, slew_ms}, ...]
+get_viz_decls() -> Array             # [{name, type, state_id, options_json, …}, ...]
 
 # Parameters
 set_param(name, value, slew_ms=20.0)
@@ -124,7 +151,12 @@ get_param_decls() -> Array           # [{name, type, default, min, max, options}
 
 # Visualization
 get_waveform_data() -> PackedFloat32Array  # 1024 frames, L/R interleaved
+
+# Audio input (INPUT opcode)
+set_input_buffers(left: PackedFloat32Array, right: PackedFloat32Array)
 ```
+
+`cc_num` sentinels in `get_midi_cc_routes()`: `0..127` = CC number, `-1` = pitch-bend, `-2` = channel aftertouch. GDScript host is responsible for wiring Godot's MIDI input → `set_param(name, value, slew_ms)`; the addon surfaces the routes but does not auto-wire `InputEventMIDI`.
 
 ### Signals
 
@@ -147,6 +179,8 @@ params_changed(params: Array)
 - Full-width code editor with syntax highlighting and error markers
 - Toolbar: Compile, Play, Stop, BPM spinner
 - Parameters panel (sliders, buttons, toggles, dropdowns)
+- Visualizations list (read-only — names + types from `get_viz_decls()`; rendering not yet wired)
+- MIDI CC routes list (read-only — `cc#N → param_name` from `get_midi_cc_routes()`)
 - Waveform visualization (~30 FPS)
 
 ### Plugin (`nkido_plugin.gd`)

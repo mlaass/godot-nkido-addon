@@ -12,44 +12,19 @@ add_subdirectory(${GODOT_CPP_PATH} godot-cpp EXCLUDE_FROM_ALL)
 
 # --- Cedar sources ---
 set(CEDAR_DIR "${NKIDO_PATH}/cedar")
-set(CEDAR_SOURCES
-    ${CEDAR_DIR}/src/cedar.cpp
-    ${CEDAR_DIR}/src/vm/vm.cpp
-    ${CEDAR_DIR}/src/opcodes/minblep_table.cpp
-    ${CEDAR_DIR}/src/opcodes/minblep_state.cpp
-    ${CEDAR_DIR}/src/io/audio_decoder.cpp
-    ${CEDAR_DIR}/src/io/file_loader.cpp
-    ${CEDAR_DIR}/src/audio/soundfont.cpp
-    ${CEDAR_DIR}/src/dsp/fft.cpp
+file(GLOB_RECURSE CEDAR_SOURCES CONFIGURE_DEPENDS
+    "${CEDAR_DIR}/src/*.cpp"
 )
+# Drop network URI handlers — they pull in cpp-httplib which requires
+# C++ exceptions, but godot-cpp compiles with -fno-exceptions. The addon
+# explicitly does not support http:// / github: URIs (see
+# auto_load_required_assets in nkido_audio_stream.cpp).
+list(FILTER CEDAR_SOURCES EXCLUDE REGEX ".*/io/handlers/(http|github)_handler\\.cpp$")
 
 # --- Akkado sources ---
 set(AKKADO_DIR "${NKIDO_PATH}/akkado")
-set(AKKADO_SOURCES
-    ${AKKADO_DIR}/src/akkado.cpp
-    ${AKKADO_DIR}/src/diagnostics.cpp
-    ${AKKADO_DIR}/src/lexer.cpp
-    ${AKKADO_DIR}/src/parser.cpp
-    ${AKKADO_DIR}/src/mini_lexer.cpp
-    ${AKKADO_DIR}/src/mini_parser.cpp
-    ${AKKADO_DIR}/src/pattern_eval.cpp
-    ${AKKADO_DIR}/src/symbol_table.cpp
-    ${AKKADO_DIR}/src/analyzer.cpp
-    ${AKKADO_DIR}/src/const_eval.cpp
-    ${AKKADO_DIR}/src/codegen.cpp
-    ${AKKADO_DIR}/src/codegen_arrays.cpp
-    ${AKKADO_DIR}/src/codegen_functions.cpp
-    ${AKKADO_DIR}/src/codegen_params.cpp
-    ${AKKADO_DIR}/src/codegen_patterns.cpp
-    ${AKKADO_DIR}/src/codegen_stereo.cpp
-    ${AKKADO_DIR}/src/codegen_viz.cpp
-    ${AKKADO_DIR}/src/typed_value.cpp
-    ${AKKADO_DIR}/src/chord_parser.cpp
-    ${AKKADO_DIR}/src/pattern_debug.cpp
-    ${AKKADO_DIR}/src/tuning.cpp
-    ${AKKADO_DIR}/src/source_map.cpp
-    ${AKKADO_DIR}/src/file_resolver.cpp
-    ${AKKADO_DIR}/src/import_scanner.cpp
+file(GLOB_RECURSE AKKADO_SOURCES CONFIGURE_DEPENDS
+    "${AKKADO_DIR}/src/*.cpp"
 )
 
 # --- Extension sources ---

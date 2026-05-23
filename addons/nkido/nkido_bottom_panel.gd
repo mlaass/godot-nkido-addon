@@ -10,6 +10,8 @@ var source_label: Label
 var code_edit: CodeEdit
 var status_label: Label
 var params_panel: VBoxContainer
+var viz_panel: VBoxContainer
+var midi_cc_panel: VBoxContainer
 var waveform_view: Control
 var waveform_timer: Timer
 
@@ -93,6 +95,16 @@ func _ready() -> void:
   params_panel = VBoxContainer.new()
   params_panel.add_theme_constant_override("separation", 4)
   right_panel.add_child(params_panel)
+
+  # Visualizations declared by the program (read-only list for now).
+  viz_panel = VBoxContainer.new()
+  viz_panel.add_theme_constant_override("separation", 2)
+  right_panel.add_child(viz_panel)
+
+  # MIDI CC routes declared by midi_cc() (read-only list).
+  midi_cc_panel = VBoxContainer.new()
+  midi_cc_panel.add_theme_constant_override("separation", 2)
+  right_panel.add_child(midi_cc_panel)
 
   # Waveform
   waveform_view = NkidoWaveformView.new()
@@ -226,6 +238,58 @@ func _on_compilation_finished(success: bool, errors: Array) -> void:
 
 func _on_params_changed(params: Array) -> void:
   _build_param_controls(params)
+  _build_viz_list()
+  _build_midi_cc_list()
+
+func _build_viz_list() -> void:
+  if not is_instance_valid(viz_panel):
+    return
+  for child in viz_panel.get_children():
+    child.queue_free()
+  if not is_instance_valid(current_stream):
+    return
+  var decls: Array = current_stream.call("get_viz_decls")
+  if decls.is_empty():
+    return
+  var header := Label.new()
+  header.text = "Visualizations"
+  header.add_theme_font_size_override("font_size", 13)
+  viz_panel.add_child(header)
+  for v: Dictionary in decls:
+    var row := Label.new()
+    row.text = "%s — %s" % [v.get("name", ""), v.get("type", "")]
+    row.add_theme_font_size_override("font_size", 11)
+    row.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
+    viz_panel.add_child(row)
+
+func _build_midi_cc_list() -> void:
+  if not is_instance_valid(midi_cc_panel):
+    return
+  for child in midi_cc_panel.get_children():
+    child.queue_free()
+  if not is_instance_valid(current_stream):
+    return
+  var routes: Array = current_stream.call("get_midi_cc_routes")
+  if routes.is_empty():
+    return
+  var header := Label.new()
+  header.text = "MIDI CC routes"
+  header.add_theme_font_size_override("font_size", 13)
+  midi_cc_panel.add_child(header)
+  for r: Dictionary in routes:
+    var cc: int = r.get("cc_num", 0)
+    var cc_label: String
+    if cc == -1:
+      cc_label = "PB"
+    elif cc == -2:
+      cc_label = "AT"
+    else:
+      cc_label = "CC%d" % cc
+    var row := Label.new()
+    row.text = "%s → %s" % [cc_label, r.get("param_name", "")]
+    row.add_theme_font_size_override("font_size", 11)
+    row.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
+    midi_cc_panel.add_child(row)
 
 func _on_waveform_tick() -> void:
   if not is_instance_valid(waveform_view):
